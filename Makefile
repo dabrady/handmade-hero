@@ -1,7 +1,10 @@
 PHONY: clean build
 
 build: clean
-	c++ -g -o handmade code/osx_handmade.cpp
+	c++ -o handmade code/osx_handmade.cpp `sdl2-config --cflags --libs`
+
+dbuild: clean
+	c++ -g -o handmade code/osx_handmade.cpp `sdl2-config --cflags --libs`
 
 clean:
 	$(RM) build/*
