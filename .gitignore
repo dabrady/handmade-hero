@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# ^^^ Github defaults for C++ project
+# Mine
+build/*
+handmade.dSYM
+handmade
