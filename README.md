@@ -1,2 +1,2 @@
-# handmade-hero
-My version of https://handmadehero.org
+# handmade hero
+My incarnation of https://handmadehero.org
