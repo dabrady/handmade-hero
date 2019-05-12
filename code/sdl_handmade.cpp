@@ -1,6 +1,10 @@
-#include <iostream>
+#include <SDL.h>
 
 int main(int argc, char** argv) {
-  std::cout << "Hello, world!" << std::endl;
+  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
+                           "Handmade Hero",
+                           "This is handmade. I made it.",
+                           NULL);
+
   return 0;
 }
