@@ -1,7 +1,7 @@
 BUILD  := ./build
 CODE   := ./code
 TARGET := handmade
-SRC    := $(CODE)/osx_handmade.cpp
+SRC    := $(CODE)/sdl_handmade.cpp
 
 PHONY: handmade clean run
 .SILENT: $(BUILD) clean run
