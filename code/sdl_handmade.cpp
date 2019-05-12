@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 /* Forward declarations */
-bool HandleEvent(SDL_Event*);
+bool HandleEvent(SDL_Event*, SDL_Window*);
 
 int main(int argc, char** argv) {
 #if 1
@@ -43,7 +43,8 @@ int main(int argc, char** argv) {
   for(;;) {
     SDL_Event event;
     if(SDL_WaitEvent(&event)) {
-      if(HandleEvent(&event)) {
+      if(HandleEvent(&event, window)) {
+        SDL_DestroyWindow(window);
         break;
       }
     }
@@ -59,7 +60,7 @@ int main(int argc, char** argv) {
 
 // ********
 
-bool HandleEvent(SDL_Event* Event) {
+bool HandleEvent(SDL_Event* Event, SDL_Window* Window) {
   bool shouldQuit = false;
 
   switch(Event->type) {
@@ -85,6 +86,27 @@ bool HandleEvent(SDL_Event* Event) {
         case SDL_WINDOWEVENT_CLOSE:
         {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window closed");
+        } break;
+
+        case SDL_WINDOWEVENT_EXPOSED:
+        {
+          SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
+
+          // Draw something.
+          int AUTODETECT_DRIVER = -1;
+          Uint32 renderFlags = 0;
+          SDL_Renderer* renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, renderFlags);
+          if(renderer == NULL) {
+            SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create rendering context: %s", SDL_GetError());
+          }
+          else
+          {
+            // Draw white
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+
+            SDL_RenderClear(renderer);
+            SDL_RenderPresent(renderer);
+          }
         } break;
       }
     } break;
