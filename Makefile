@@ -1,12 +1,21 @@
-PHONY: clean build
+BUILD  := ./build
+CODE   := ./code
+TARGET := handmade
+SRC    := $(CODE)/osx_handmade.cpp
 
-build: clean
-	c++ -o handmade code/osx_handmade.cpp `sdl2-config --cflags --libs`
+PHONY: handmade clean run
+.SILENT: $(BUILD) clean run
 
-dbuild: clean
-	c++ -g -o handmade code/osx_handmade.cpp `sdl2-config --cflags --libs`
+handmade: $(BUILD)/$(TARGET)
+
+$(BUILD)/$(TARGET): $(BUILD)
+	@c++ -g -o $(BUILD)/$(TARGET) $(SRC) `sdl2-config --cflags --libs`
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+run: handmade
+	[[ -d $(BUILD) ]] && $(BUILD)/$(TARGET)
 
 clean:
-	$(RM) build/*
-	$(RM) -r handmade.dSYM
-	$(RM) handmade
+	$(RM) -r $(BUILD)
