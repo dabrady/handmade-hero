@@ -13,6 +13,7 @@ global_variable bool Running;
 
 
 /* Forward declarations */
+int WindowResizeEventFilter(void*, SDL_Event*);
 void HandleEvent(SDL_Event*, SDL_Renderer*);
 
 int main(int argc, char** argv) {
@@ -61,6 +62,7 @@ int main(int argc, char** argv) {
 
   // Main event loop
   Running = true;
+  SDL_AddEventWatch(WindowResizeEventFilter, window);
   while(Running) {
     SDL_Event event;
     if(SDL_WaitEvent(&event)) {
@@ -78,6 +80,49 @@ int main(int argc, char** argv) {
 
 // ********
 
+int WindowResizeEventFilter(void* Data, SDL_Event* Event) {
+  switch(Event->type) {
+    case SDL_WINDOWEVENT:
+    {
+      switch(Event->window.event) {
+        case SDL_WINDOWEVENT_SIZE_CHANGED:
+        {
+          SDL_Window* window = SDL_GetWindowFromID(Event->window.windowID);
+          // Ensure this event came from our main window.
+          if( window == (SDL_Window*) Data ) {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
+
+            // Draw something.
+            SDL_Renderer* renderer = SDL_GetRenderer(window);
+            // Toggle between black and white.
+            static bool drawWhite = true;
+            if (drawWhite) {
+              SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+              drawWhite = false;
+            }
+            else
+              {
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+                drawWhite = true;
+              }
+
+          }
+        } break;
+
+        // case SDL_WINDOWEVENT_RESIZED:
+        // {
+        //   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window resized: (%d x %d)", Event->window.data1, Event->window.data2);
+        // } break;
+      }
+    } break;
+
+    default:
+    {
+    } break;
+  }
+
+  return(0);
+}
 
 void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
   switch(Event->type) {
@@ -91,11 +136,6 @@ void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
     case SDL_WINDOWEVENT:
     {
       switch(Event->window.event) {
-        case SDL_WINDOWEVENT_RESIZED:
-        {
-          SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window resized: (%d x %d)", Event->window.data1, Event->window.data2);
-        } break;
-
         case SDL_WINDOWEVENT_FOCUS_GAINED:
         {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window gained focus");
@@ -112,20 +152,7 @@ void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
         {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
 
-          // Draw something.
-          // Toggle between black and white.
-          static bool drawWhite = true;
-          if (drawWhite) {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-            drawWhite = false;
-          }
-          else
-          {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-            drawWhite = true;
-          }
-
-          // Redraw only if the window has been re-exposed
+          // Redraw only if the window has been exposed
           SDL_RenderClear(renderer);
           SDL_RenderPresent(renderer);
         } break;
