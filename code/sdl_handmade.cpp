@@ -1,8 +1,19 @@
 #include <SDL.h>
 #include <stdlib.h>
 
+/* Macros */
+
+// The many faces of 'static'
+#define internal static
+#define local_persist static
+#define global_variable static
+
+/* Globals */
+global_variable bool Running;
+
+
 /* Forward declarations */
-bool HandleEvent(SDL_Event*, SDL_Renderer*);
+void HandleEvent(SDL_Event*, SDL_Renderer*);
 
 int main(int argc, char** argv) {
 #if 1
@@ -49,13 +60,11 @@ int main(int argc, char** argv) {
   }
 
   // Main event loop
-  for(;;) {
+  Running = true;
+  while(Running) {
     SDL_Event event;
     if(SDL_WaitEvent(&event)) {
-      if(HandleEvent(&event, renderer)) {
-        SDL_DestroyWindow(window);
-        break;
-      }
+      HandleEvent(&event, renderer);
     }
     else
     {
@@ -69,14 +78,14 @@ int main(int argc, char** argv) {
 
 // ********
 
-bool HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
-  bool shouldQuit = false;
 
+void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
   switch(Event->type) {
     case SDL_QUIT:
     {
       SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "quit");
-      shouldQuit = true;
+      // TODO: Handle this with an error?
+      Running = false;
     } break;
 
     case SDL_WINDOWEVENT:
@@ -95,6 +104,8 @@ bool HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
         case SDL_WINDOWEVENT_CLOSE:
         {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window closed");
+          // TODO: Handle this with message to the user?
+          Running = false;
         } break;
 
         case SDL_WINDOWEVENT_EXPOSED:
@@ -126,6 +137,4 @@ bool HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
       // SDL_LogDebug("default");
     } break;
   }
-
-  return(shouldQuit);
 }
