@@ -128,7 +128,6 @@ void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
   switch(Event->type) {
     case SDL_QUIT:
     {
-      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "quit");
       // TODO: Handle this with an error?
       Running = false;
     } break;
@@ -143,7 +142,6 @@ void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
 
         case SDL_WINDOWEVENT_CLOSE:
         {
-          SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window closed");
           // TODO: Handle this with message to the user?
           Running = false;
         } break;
