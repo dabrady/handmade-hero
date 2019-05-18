@@ -13,19 +13,20 @@ global_variable bool Running;
 
 
 /* Forward declarations */
-int WindowResizeEventFilter(void*, SDL_Event*);
-void HandleEvent(SDL_Event*, SDL_Renderer*);
+internal int WindowResizeEventFilter(void*, SDL_Event*);
+internal void HandleEvent(SDL_Event*, SDL_Renderer*);
 
-int main(int argc, char** argv) {
+int main(int ArgCount, char** ArgValues)
+{
 #if 1
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
-  Uint32 subsystems =
+  Uint32 Subsystems =
     SDL_INIT_VIDEO; // graphics and window management
 
   // Initialize SDL
-  if (SDL_InitSubSystem(subsystems) != 0) {
+  if (SDL_InitSubSystem(Subsystems) != 0) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialize SDL: %s", SDL_GetError());
     return(1);
   }
@@ -34,39 +35,39 @@ int main(int argc, char** argv) {
   // Shutdown SDL on exit
   atexit(SDL_Quit);
 
-  // Setup initial window
-  Uint32 windowFlags =
+  // Setup initial Window
+  Uint32 WindowFlags =
     SDL_WINDOW_RESIZABLE;
-  SDL_Window* window = SDL_CreateWindow("Handmade Hero",         // const char* title,
+  SDL_Window* Window = SDL_CreateWindow("Handmade Hero",         // const char* title,
                                         SDL_WINDOWPOS_UNDEFINED, // int         x,
                                         SDL_WINDOWPOS_UNDEFINED, // int         y,
                                         640,                     // int         w,
                                         480,                     // int         h,
-                                        windowFlags              // Uint32      flags
+                                        WindowFlags              // Uint32      flags
                                         );
   // Check if the window creation was successful.
-  if (window == NULL) {
+  if (Window == NULL) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create main application window: %s", SDL_GetError());
-    return(1);
+    return(1);W
   }
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Application window created");
 
   // Setup a rendering context.
   int AUTODETECT_DRIVER = -1;
-  Uint32 renderFlags = 0;
-  SDL_Renderer* renderer = SDL_CreateRenderer(window, AUTODETECT_DRIVER, renderFlags);
-  if(renderer == NULL) {
+  Uint32 RenderFlags = 0;
+  SDL_Renderer* Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
+  if(Renderer == NULL) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create rendering context: %s", SDL_GetError());
     return(1);
   }
 
   // Main event loop
   Running = true;
-  SDL_AddEventWatch(WindowResizeEventFilter, window);
+  SDL_AddEventWatch(WindowResizeEventFilter, Window);
   while(Running) {
-    SDL_Event event;
-    if(SDL_WaitEvent(&event)) {
-      HandleEvent(&event, renderer);
+    SDL_Event Event;
+    if(SDL_WaitEvent(&Event)) {
+      HandleEvent(&Event, Renderer);
     }
     else
     {
@@ -80,29 +81,31 @@ int main(int argc, char** argv) {
 
 // ********
 
-int WindowResizeEventFilter(void* Data, SDL_Event* Event) {
+internal int
+WindowResizeEventFilter(void* Data, SDL_Event* Event)
+{
   switch(Event->type) {
     case SDL_WINDOWEVENT:
     {
       switch(Event->window.event) {
         case SDL_WINDOWEVENT_SIZE_CHANGED:
         {
-          SDL_Window* window = SDL_GetWindowFromID(Event->window.windowID);
+          SDL_Window* Window = SDL_GetWindowFromID(Event->window.windowID);
           // Ensure this event came from our main window.
-          if( window == (SDL_Window*) Data ) {
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
+          if( Window == (SDL_Window*) Data ) {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
 
             // Draw something.
-            SDL_Renderer* renderer = SDL_GetRenderer(window);
+            SDL_Renderer* Renderer = SDL_GetRenderer(Window);
             // Toggle between black and white.
             static bool drawWhite = true;
             if (drawWhite) {
-              SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+              SDL_SetRenderDrawColor(Renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
               drawWhite = false;
             }
             else
               {
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+                SDL_SetRenderDrawColor(Renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
                 drawWhite = true;
               }
 
@@ -111,7 +114,7 @@ int WindowResizeEventFilter(void* Data, SDL_Event* Event) {
 
         // case SDL_WINDOWEVENT_RESIZED:
         // {
-        //   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window resized: (%d x %d)", Event->window.data1, Event->window.data2);
+        //   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window resized: (%d x %d)", Event->window.data1, Event->window.data2);
         // } break;
       }
     } break;
@@ -124,7 +127,9 @@ int WindowResizeEventFilter(void* Data, SDL_Event* Event) {
   return(0);
 }
 
-void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
+internal void
+HandleEvent(SDL_Event* Event, SDL_Renderer* Renderer)
+{
   switch(Event->type) {
     case SDL_QUIT:
     {
@@ -151,8 +156,8 @@ void HandleEvent(SDL_Event* Event, SDL_Renderer* renderer) {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
 
           // Redraw only if the window has been exposed
-          SDL_RenderClear(renderer);
-          SDL_RenderPresent(renderer);
+          SDL_RenderClear(Renderer);
+          SDL_RenderPresent(Renderer);
         } break;
       }
     } break;
