@@ -8,13 +8,20 @@
 #define local_persist static
 #define global_variable static
 
+// The size of a byte, in bits
+#define BYTE_SIZE 4
+
 /* Globals */
 global_variable bool Running;
-
+global_variable SDL_Renderer* Renderer;
+global_variable SDL_Texture* Texture;
+global_variable void* Pixels;
 
 /* Forward declarations */
 internal int WindowResizeEventFilter(void*, SDL_Event*);
-internal void HandleEvent(SDL_Event*, SDL_Renderer*);
+internal void HandleEvent(SDL_Event*);
+internal void ResizeTexture(int, int);
+internal void UpdateWindow();
 
 int main(int ArgCount, char** ArgValues)
 {
@@ -48,14 +55,14 @@ int main(int ArgCount, char** ArgValues)
   // Check if the window creation was successful.
   if (Window == NULL) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create main application window: %s", SDL_GetError());
-    return(1);W
+    return(1);
   }
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Application window created");
 
   // Setup a rendering context.
   int AUTODETECT_DRIVER = -1;
   Uint32 RenderFlags = 0;
-  SDL_Renderer* Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
+  Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
   if(Renderer == NULL) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create rendering context: %s", SDL_GetError());
     return(1);
@@ -67,7 +74,7 @@ int main(int ArgCount, char** ArgValues)
   while(Running) {
     SDL_Event Event;
     if(SDL_WaitEvent(&Event)) {
-      HandleEvent(&Event, Renderer);
+      HandleEvent(&Event);
     }
     else
     {
@@ -95,20 +102,12 @@ WindowResizeEventFilter(void* Data, SDL_Event* Event)
           if( Window == (SDL_Window*) Data ) {
             SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
 
-            // Draw something.
-            SDL_Renderer* Renderer = SDL_GetRenderer(Window);
-            // Toggle between black and white.
-            static bool drawWhite = true;
-            if (drawWhite) {
-              SDL_SetRenderDrawColor(Renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-              drawWhite = false;
-            }
-            else
-              {
-                SDL_SetRenderDrawColor(Renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-                drawWhite = true;
-              }
+            int Width = Event->window.data1;
+            int Height = Event->window.data2;
+            // SDL_GetWindowSize(Window, &Width, &Height);
 
+            // Update our buffer for next paint.
+            ResizeTexture(Width, Height);
           }
         } break;
 
@@ -128,7 +127,7 @@ WindowResizeEventFilter(void* Data, SDL_Event* Event)
 }
 
 internal void
-HandleEvent(SDL_Event* Event, SDL_Renderer* Renderer)
+HandleEvent(SDL_Event* Event)
 {
   switch(Event->type) {
     case SDL_QUIT:
@@ -151,9 +150,13 @@ HandleEvent(SDL_Event* Event, SDL_Renderer* Renderer)
           Running = false;
         } break;
 
+        // This is the main "paint" event.
         case SDL_WINDOWEVENT_EXPOSED:
         {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
+
+          // SDL_Window* Window = SDL_GetWindowFromID(Event->window.windowID);
+          UpdateWindow();
 
           // Redraw only if the window has been exposed
           SDL_RenderClear(Renderer);
@@ -167,4 +170,58 @@ HandleEvent(SDL_Event* Event, SDL_Renderer* Renderer)
       // SDL_LogDebug("default");
     } break;
   }
+}
+
+internal void
+ResizeTexture(int Width, int Height)
+{
+  // TODO: Bulletproof this.
+  // Maybe don't free first, free after, then free first if that fails.
+
+  // Free any previously created memory.
+  if (Texture)
+  {
+    SDL_DestroyTexture(Texture);
+  }
+
+  if (Pixels)
+  {
+    free(Pixels);
+  }
+
+  // Create new texture buffer.
+  Texture = SDL_CreateTexture(Renderer,
+                              /**
+                               * This describes the format of our pixel data.
+                               * We are going to use 32 bits (4 bytes) for each pixel:
+                               * 8 bits (1 byte) each for our Alpha, Red, Green, and Blue
+                               * values in that order.
+                               */
+                              SDL_PIXELFORMAT_ARGB32,
+                              // A hint for the graphics driver about how we will access the texture.
+                              SDL_TEXTUREACCESS_STREAMING,
+                              Width,
+                              Height);
+  Pixels = malloc(Width * Height * BYTE_SIZE);
+
+  // Give our new texture fresh pixel data.
+  int PixelLineSize = Width * BYTE_SIZE; // number of bytes in a row of pixels
+
+  // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
+  if (SDL_UpdateTexture(Texture, NULL, Pixels, PixelLineSize))
+  {
+    // TODO: Handle error.
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error updating texture map: %s", SDL_GetError());
+  }
+}
+
+internal void
+UpdateWindow()
+{
+  // Copy the texture to the screen.
+  SDL_RenderCopy(Renderer,
+                 Texture,
+                 NULL, // Source rectangle (NULL means whole texture)
+                 NULL  // Destination rectangle (NULL means whole texture)
+                 );
 }
