@@ -13,15 +13,16 @@
 
 /* Globals */
 global_variable bool Running;
-global_variable SDL_Renderer *Renderer;
 global_variable SDL_Texture *Texture;
 global_variable void *BitmapMemory;
+global_variable int BitmapWidth;
+global_variable int BitmapHeight;
 
 /* Forward declarations */
 internal int WindowResizeEventFilter(void *, SDL_Event *);
 internal void HandleEvent(SDL_Event *);
-internal void ResizeTexture(int, int);
-internal void UpdateWindow();
+internal void ResizeTexture(SDL_Renderer *, int, int);
+internal void UpdateWindow(SDL_Renderer *);
 
 int main(int ArgCount, char **ArgValues)
 {
@@ -62,7 +63,7 @@ int main(int ArgCount, char **ArgValues)
   // Setup a rendering context.
   int AUTODETECT_DRIVER = -1;
   Uint32 RenderFlags = 0;
-  Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
+  SDL_Renderer *Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
   if(Renderer == NULL) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create rendering context: %s", SDL_GetError());
     return(1);
@@ -107,7 +108,8 @@ WindowResizeEventFilter(void *Data, SDL_Event *Event)
             // SDL_GetWindowSize(Window, &Width, &Height);
 
             // Update our buffer for next paint.
-            ResizeTexture(Width, Height);
+            SDL_Renderer *Renderer = SDL_GetRenderer(Window);
+            ResizeTexture(Renderer, Width, Height);
           }
         } break;
 
@@ -155,11 +157,19 @@ HandleEvent(SDL_Event *Event)
         {
           SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
 
-          // SDL_Window* Window = SDL_GetWindowFromID(Event->window.windowID);
-          UpdateWindow();
+          SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
+          SDL_Renderer *Renderer = SDL_GetRenderer(Window);
+
+          if(NULL == Texture)
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "no texture creating");
+            int Width, Height;
+            SDL_GetWindowSize(Window, &Width, &Height);
+            ResizeTexture(Renderer, Width, Height);
+          }
+          UpdateWindow(Renderer);
 
           // Redraw only if the window has been exposed
-          SDL_RenderClear(Renderer);
           SDL_RenderPresent(Renderer);
         } break;
       }
@@ -173,7 +183,7 @@ HandleEvent(SDL_Event *Event)
 }
 
 internal void
-ResizeTexture(int Width, int Height)
+ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
 {
   // TODO: Bulletproof this.
   // Maybe don't free first, free after, then free first if that fails.
@@ -181,34 +191,78 @@ ResizeTexture(int Width, int Height)
   // Free any previously created memory.
   if (Texture)
   {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "texture exists: destroying");
     SDL_DestroyTexture(Texture);
   }
 
   if (BitmapMemory)
   {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "bitmap exits: freeing");
     free(BitmapMemory);
   }
 
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "creating new texture");
   // Create new texture buffer.
   Texture = SDL_CreateTexture(Renderer,
                               /**
                                * This describes the format of our pixel data.
                                * We are going to use 32 bits (4 bytes) for each pixel:
-                               * 8 bits (1 byte) each for our Alpha, Red, Green, and Blue
-                               * values in that order.
+                               * 8 bits (1 byte) each for our Red, Green, Blue, and Alpha values.
+                               *
+                               * A big endian format (RGBA) would likely be more readable, but
+                               * to follow along with Casey's lessons, I'm choosing to use a
+                               * little endian forat to match Windows-style architecture.
                                */
-                              SDL_PIXELFORMAT_ARGB32,
+                              SDL_PIXELFORMAT_BGRA32,
                               // A hint for the graphics driver about how we will access the texture.
                               SDL_TEXTUREACCESS_STREAMING,
                               Width,
                               Height);
-  BitmapMemory = malloc(Width * Height * BYTES_PER_PIXEL);
+
+  BitmapWidth = Width;
+  BitmapHeight = Height;
+
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "allocating new bitmap memory");
+  int BitmapMemorySize = (Width * Height) * BYTES_PER_PIXEL;
+  BitmapMemory = malloc(BitmapMemorySize);
+
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
+  int Pitch = Width * BYTES_PER_PIXEL; // number of bytes in a row of pixels
+  Uint8 *Row = (Uint8 *)BitmapMemory;
+  for(int Y = 0;
+      Y < BitmapHeight;
+      ++Y)
+  {
+    Uint8 *Pixel = (Uint8 *)Row;
+    for(int X = 0;
+        X < BitmapWidth;
+        ++X)
+    {
+      /*
+       * Pixel in memory:  BB GG RR xx
+       *
+       * 0x xxRRGGBB
+       */
+      *Pixel = 0;
+      ++Pixel;
+
+      *Pixel = 0;
+      ++Pixel;
+
+      *Pixel = 255;
+      ++Pixel;
+
+      *Pixel = 0;
+      ++Pixel;
+    }
+
+    // Move pointer to the next row.
+    Row += Pitch;
+  }
 
   // Give our new texture fresh pixel data.
-  int PixelLineSize = Width * BYTES_PER_PIXEL; // number of bytes in a row of pixels
-
   // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
-  if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, PixelLineSize))
+  if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, Pitch))
   {
     // TODO: Handle error.
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error updating texture map: %s", SDL_GetError());
@@ -216,7 +270,7 @@ ResizeTexture(int Width, int Height)
 }
 
 internal void
-UpdateWindow()
+UpdateWindow(SDL_Renderer *Renderer)
 {
   // Copy the texture to the screen.
   SDL_RenderCopy(Renderer,
