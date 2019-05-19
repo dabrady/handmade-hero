@@ -13,17 +13,17 @@
 
 /* Globals */
 global_variable bool Running;
-global_variable SDL_Renderer* Renderer;
-global_variable SDL_Texture* Texture;
-global_variable void* Pixels;
+global_variable SDL_Renderer *Renderer;
+global_variable SDL_Texture *Texture;
+global_variable void *BitmapMemory;
 
 /* Forward declarations */
-internal int WindowResizeEventFilter(void*, SDL_Event*);
-internal void HandleEvent(SDL_Event*);
+internal int WindowResizeEventFilter(void *, SDL_Event *);
+internal void HandleEvent(SDL_Event *);
 internal void ResizeTexture(int, int);
 internal void UpdateWindow();
 
-int main(int ArgCount, char** ArgValues)
+int main(int ArgCount, char **ArgValues)
 {
 #if 1
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
@@ -45,7 +45,7 @@ int main(int ArgCount, char** ArgValues)
   // Setup initial Window
   Uint32 WindowFlags =
     SDL_WINDOW_RESIZABLE;
-  SDL_Window* Window = SDL_CreateWindow("Handmade Hero",         // const char* title,
+  SDL_Window *Window = SDL_CreateWindow("Handmade Hero",         // const char* title,
                                         SDL_WINDOWPOS_UNDEFINED, // int         x,
                                         SDL_WINDOWPOS_UNDEFINED, // int         y,
                                         640,                     // int         w,
@@ -89,7 +89,7 @@ int main(int ArgCount, char** ArgValues)
 // ********
 
 internal int
-WindowResizeEventFilter(void* Data, SDL_Event* Event)
+WindowResizeEventFilter(void *Data, SDL_Event *Event)
 {
   switch(Event->type) {
     case SDL_WINDOWEVENT:
@@ -97,9 +97,9 @@ WindowResizeEventFilter(void* Data, SDL_Event* Event)
       switch(Event->window.event) {
         case SDL_WINDOWEVENT_SIZE_CHANGED:
         {
-          SDL_Window* Window = SDL_GetWindowFromID(Event->window.windowID);
+          SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
           // Ensure this event came from our main window.
-          if( Window == (SDL_Window*) Data ) {
+          if( Window == (SDL_Window *) Data ) {
             SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
 
             int Width = Event->window.data1;
@@ -127,7 +127,7 @@ WindowResizeEventFilter(void* Data, SDL_Event* Event)
 }
 
 internal void
-HandleEvent(SDL_Event* Event)
+HandleEvent(SDL_Event *Event)
 {
   switch(Event->type) {
     case SDL_QUIT:
@@ -184,9 +184,9 @@ ResizeTexture(int Width, int Height)
     SDL_DestroyTexture(Texture);
   }
 
-  if (Pixels)
+  if (BitmapMemory)
   {
-    free(Pixels);
+    free(BitmapMemory);
   }
 
   // Create new texture buffer.
@@ -202,13 +202,13 @@ ResizeTexture(int Width, int Height)
                               SDL_TEXTUREACCESS_STREAMING,
                               Width,
                               Height);
-  Pixels = malloc(Width * Height * BYTES_PER_PIXEL);
+  BitmapMemory = malloc(Width * Height * BYTES_PER_PIXEL);
 
   // Give our new texture fresh pixel data.
   int PixelLineSize = Width * BYTES_PER_PIXEL; // number of bytes in a row of pixels
 
   // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
-  if (SDL_UpdateTexture(Texture, NULL, Pixels, PixelLineSize))
+  if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, PixelLineSize))
   {
     // TODO: Handle error.
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error updating texture map: %s", SDL_GetError());
