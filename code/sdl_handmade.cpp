@@ -8,8 +8,8 @@
 #define local_persist static
 #define global_variable static
 
-// The size of a byte, in bits
-#define BYTE_SIZE 4
+// The size of a pixel, in bytes
+#define BYTES_PER_PIXEL 4
 
 /* Globals */
 global_variable bool Running;
@@ -202,10 +202,10 @@ ResizeTexture(int Width, int Height)
                               SDL_TEXTUREACCESS_STREAMING,
                               Width,
                               Height);
-  Pixels = malloc(Width * Height * BYTE_SIZE);
+  Pixels = malloc(Width * Height * BYTES_PER_PIXEL);
 
   // Give our new texture fresh pixel data.
-  int PixelLineSize = Width * BYTE_SIZE; // number of bytes in a row of pixels
+  int PixelLineSize = Width * BYTES_PER_PIXEL; // number of bytes in a row of pixels
 
   // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
   if (SDL_UpdateTexture(Texture, NULL, Pixels, PixelLineSize))
