@@ -38,7 +38,7 @@ int main(int ArgCount, char **ArgValues)
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialize SDL: %s", SDL_GetError());
     return(1);
   }
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "SDL initialized");
+  // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "SDL initialized");
 
   // Shutdown SDL on exit
   atexit(SDL_Quit);
@@ -58,7 +58,7 @@ int main(int ArgCount, char **ArgValues)
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create main application window: %s", SDL_GetError());
     return(1);
   }
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Application window created");
+  // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Application window created");
 
   // Setup a rendering context.
   int AUTODETECT_DRIVER = -1;
@@ -101,7 +101,7 @@ WindowResizeEventFilter(void *Data, SDL_Event *Event)
           SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
           // Ensure this event came from our main window.
           if( Window == (SDL_Window *) Data ) {
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
+            // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
 
             int Width = Event->window.data1;
             int Height = Event->window.data2;
@@ -115,7 +115,7 @@ WindowResizeEventFilter(void *Data, SDL_Event *Event)
 
         // case SDL_WINDOWEVENT_RESIZED:
         // {
-        //   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window resized: (%d x %d)", Event->window.data1, Event->window.data2);
+          // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window resized: (%d x %d)", Event->window.data1, Event->window.data2);
         // } break;
       }
     } break;
@@ -143,7 +143,7 @@ HandleEvent(SDL_Event *Event)
       switch(Event->window.event) {
         case SDL_WINDOWEVENT_FOCUS_GAINED:
         {
-          SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window gained focus");
+          // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window gained focus");
         } break;
 
         case SDL_WINDOWEVENT_CLOSE:
@@ -155,14 +155,14 @@ HandleEvent(SDL_Event *Event)
         // This is the main "paint" event.
         case SDL_WINDOWEVENT_EXPOSED:
         {
-          SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
+          // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window exposed");
 
           SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
           SDL_Renderer *Renderer = SDL_GetRenderer(Window);
 
           if(NULL == Texture)
           {
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "no texture creating");
+            // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "no texture creating");
             int Width, Height;
             SDL_GetWindowSize(Window, &Width, &Height);
             ResizeTexture(Renderer, Width, Height);
@@ -191,17 +191,17 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
   // Free any previously created memory.
   if (Texture)
   {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "texture exists: destroying");
+    // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "texture exists: destroying");
     SDL_DestroyTexture(Texture);
   }
 
   if (BitmapMemory)
   {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "bitmap exits: freeing");
+    // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "bitmap exits: freeing");
     free(BitmapMemory);
   }
 
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "creating new texture");
+  // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "creating new texture");
   // Create new texture buffer.
   Texture = SDL_CreateTexture(Renderer,
                               /**
@@ -222,11 +222,11 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
   BitmapWidth = Width;
   BitmapHeight = Height;
 
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "allocating new bitmap memory");
+  // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "allocating new bitmap memory");
   int BitmapMemorySize = (Width * Height) * BYTES_PER_PIXEL;
   BitmapMemory = malloc(BitmapMemorySize);
 
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
+  // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
   int Pitch = Width * BYTES_PER_PIXEL; // number of bytes in a row of pixels
   Uint8 *Row = (Uint8 *)BitmapMemory;
   for(int Y = 0;
@@ -243,13 +243,13 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
        *
        * 0x xxRRGGBB
        */
-      *Pixel = 0;
+      *Pixel = (Uint8)X / 0.6 * 1.2 - Y;
       ++Pixel;
 
-      *Pixel = 0;
+      *Pixel = (Uint8)Y / 2 * 1.2 + X;
       ++Pixel;
 
-      *Pixel = 255;
+      *Pixel = (Uint8)X - Y / 0.3;
       ++Pixel;
 
       *Pixel = 0;
