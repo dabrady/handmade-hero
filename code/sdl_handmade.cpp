@@ -19,10 +19,11 @@ global_variable int BitmapWidth;
 global_variable int BitmapHeight;
 
 /* Forward declarations */
-internal int WindowResizeEventFilter(void *, SDL_Event *);
-internal void HandleEvent(SDL_Event *);
-internal void ResizeTexture(SDL_Renderer *, int, int);
-internal void UpdateWindow(SDL_Renderer *);
+internal int WindowResizeEventFilter(void *Data, SDL_Event *Event);
+internal void HandleEvent(SDL_Event *Event);
+internal void ResizeTexture(SDL_Renderer *Renderer, int Width, int Height);
+internal void UpdateWindow(SDL_Renderer *Renderer);
+internal void RenderWeirdGradient(int XOffset, int YOffset);
 
 int main(int ArgCount, char **ArgValues)
 {
@@ -69,19 +70,28 @@ int main(int ArgCount, char **ArgValues)
     return(1);
   }
 
+  int Width, Height;
+  SDL_GetWindowSize(Window, &Width, &Height);
+  ResizeTexture(Renderer, Width, Height);
+
   // Main event loop
   Running = true;
   SDL_AddEventWatch(WindowResizeEventFilter, Window);
+  int XOffset = 0;
+  int YOffset = 0;
   while(Running) {
     SDL_Event Event;
-    if(SDL_WaitEvent(&Event)) {
+    while(SDL_PollEvent(&Event)) {
+      if(Event.type == SDL_QUIT)
+      {
+        Running = false;
+      }
       HandleEvent(&Event);
     }
-    else
-    {
-      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error waiting for main application event: %s", SDL_GetError());
-      // Keep going.
-    }
+
+    RenderWeirdGradient(XOffset, YOffset);
+    UpdateWindow(Renderer);
+    ++XOffset;
   }
 
   return(0);
@@ -132,11 +142,11 @@ internal void
 HandleEvent(SDL_Event *Event)
 {
   switch(Event->type) {
-    case SDL_QUIT:
-    {
-      // TODO: Handle this with an error?
-      Running = false;
-    } break;
+    // case SDL_QUIT:
+    // {
+    //   // TODO: Handle this with an error?
+    //   Running = false;
+    // } break;
 
     case SDL_WINDOWEVENT:
     {
@@ -159,18 +169,7 @@ HandleEvent(SDL_Event *Event)
 
           SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
           SDL_Renderer *Renderer = SDL_GetRenderer(Window);
-
-          if(NULL == Texture)
-          {
-            // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "no texture creating");
-            int Width, Height;
-            SDL_GetWindowSize(Window, &Width, &Height);
-            ResizeTexture(Renderer, Width, Height);
-          }
           UpdateWindow(Renderer);
-
-          // Redraw only if the window has been exposed
-          SDL_RenderPresent(Renderer);
         } break;
       }
     } break;
@@ -226,8 +225,35 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
   int BitmapMemorySize = (Width * Height) * BYTES_PER_PIXEL;
   BitmapMemory = malloc(BitmapMemorySize);
 
+  RenderWeirdGradient(0,0);
+}
+
+internal void
+UpdateWindow(SDL_Renderer *Renderer)
+{
+  // Give our new texture fresh pixel data.
+  // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
+  int Pitch = BitmapWidth * BYTES_PER_PIXEL; // number of bytes in a row of pixels
+  if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, Pitch))
+  {
+    // TODO: Handle error.
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error updating texture map: %s", SDL_GetError());
+  }
+  // Copy the texture to the screen.
+  SDL_RenderCopy(Renderer,
+                 Texture,
+                 NULL, // Source rectangle (NULL means whole texture)
+                 NULL  // Destination rectangle (NULL means whole texture)
+                 );
+  // Show it.
+  SDL_RenderPresent(Renderer);
+}
+
+internal void
+RenderWeirdGradient(int XOffset, int YOffset)
+{
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
-  int Pitch = Width * BYTES_PER_PIXEL; // number of bytes in a row of pixels
+  int Pitch = BitmapWidth * BYTES_PER_PIXEL; // number of bytes in a row of pixels
   Uint8 *Row = (Uint8 *)BitmapMemory;
   for(int Y = 0;
       Y < BitmapHeight;
@@ -243,10 +269,10 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
        *
        * 0x xxRRGGBB
        */
-      *Pixel = (Uint8)X / 0.6 * 1.2 - Y;
+      *Pixel = (Uint8)(X / 0.6 * 1.2 - Y + XOffset);
       ++Pixel;
 
-      *Pixel = (Uint8)Y / 2 * 1.2 + X;
+      *Pixel = (Uint8)(Y / 2 * 1.2 + X + YOffset);
       ++Pixel;
 
       *Pixel = (Uint8)X - Y / 0.3;
@@ -259,23 +285,4 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
     // Move pointer to the next row.
     Row += Pitch;
   }
-
-  // Give our new texture fresh pixel data.
-  // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
-  if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, Pitch))
-  {
-    // TODO: Handle error.
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error updating texture map: %s", SDL_GetError());
-  }
-}
-
-internal void
-UpdateWindow(SDL_Renderer *Renderer)
-{
-  // Copy the texture to the screen.
-  SDL_RenderCopy(Renderer,
-                 Texture,
-                 NULL, // Source rectangle (NULL means whole texture)
-                 NULL  // Destination rectangle (NULL means whole texture)
-                 );
 }
