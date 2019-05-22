@@ -9,20 +9,25 @@
 #define global_variable static
 
 /* Globals */
-global_variable bool Running;
+struct sdl_offscreen_buffer
+{
+  SDL_Texture *Texture;
+  void *Memory;
+  int Width;
+  int Height;
+  int Pitch;
+  int BytesPerPixel;
+};
 
-global_variable SDL_Texture *Texture;
-global_variable void *BitmapMemory;
-global_variable int BitmapWidth;
-global_variable int BitmapHeight;
-global_variable int BytesPerPixel = 4;
+global_variable bool Running;
+global_variable sdl_offscreen_buffer GlobalBackBuffer;
 
 /* Forward declarations */
 internal int SDLWindowResizeEventFilter(void *Data, SDL_Event *Event);
 internal void SDLHandleEvent(SDL_Event *Event);
-internal void SDLResizeBuffer(SDL_Renderer *Renderer, int Width, int Height);
-internal void SDLDisplayBufferInWindow(SDL_Renderer *Renderer);
-internal void RenderWeirdGradient(int XOffset, int YOffset);
+internal void SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width, int Height);
+internal void SDLDisplayBufferInWindow(sdl_offscreen_buffer Buffer, SDL_Renderer *Renderer);
+internal void RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset);
 
 int main(int ArgCount, char **ArgValues)
 {
@@ -71,7 +76,7 @@ int main(int ArgCount, char **ArgValues)
 
   int Width, Height;
   SDL_GetWindowSize(Window, &Width, &Height);
-  SDLResizeBuffer(Renderer, Width, Height);
+  SDLResizeBuffer(&GlobalBackBuffer, Renderer, Width, Height);
 
   // Main event loop
   Running = true;
@@ -88,8 +93,8 @@ int main(int ArgCount, char **ArgValues)
       SDLHandleEvent(&Event);
     }
 
-    RenderWeirdGradient(XOffset, YOffset);
-    SDLDisplayBufferInWindow(Renderer);
+    RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
+    SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
     ++XOffset;
   }
 
@@ -118,7 +123,7 @@ SDLWindowResizeEventFilter(void *Data, SDL_Event *Event)
 
             // Update our buffer for next paint.
             SDL_Renderer *Renderer = SDL_GetRenderer(Window);
-            SDLResizeBuffer(Renderer, Width, Height);
+            SDLResizeBuffer(&GlobalBackBuffer, Renderer, Width, Height);
           }
         } break;
 
@@ -168,7 +173,7 @@ SDLHandleEvent(SDL_Event *Event)
 
           SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
           SDL_Renderer *Renderer = SDL_GetRenderer(Window);
-          SDLDisplayBufferInWindow(Renderer);
+          SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
         } break;
       }
     } break;
@@ -181,27 +186,27 @@ SDLHandleEvent(SDL_Event *Event)
 }
 
 internal void
-SDLResizeBuffer(SDL_Renderer *Renderer, int Width, int Height)
+SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width, int Height)
 {
   // TODO: Bulletproof this.
   // Maybe don't free first, free after, then free first if that fails.
 
   // Free any previously created memory.
-  if (Texture)
+  if (Buffer->Texture)
   {
     // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "texture exists: destroying");
-    SDL_DestroyTexture(Texture);
+    SDL_DestroyTexture(Buffer->Texture);
   }
 
-  if (BitmapMemory)
+  if (Buffer->Memory)
   {
     // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "bitmap exits: freeing");
-    free(BitmapMemory);
+    free(Buffer->Memory);
   }
 
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "creating new texture");
   // Create new texture buffer.
-  Texture = SDL_CreateTexture(Renderer,
+  Buffer->Texture = SDL_CreateTexture(Renderer,
                               /**
                                * This describes the format of our pixel data.
                                * We are going to use 32 bits (4 bytes) for each pixel:
@@ -217,30 +222,31 @@ SDLResizeBuffer(SDL_Renderer *Renderer, int Width, int Height)
                               Width,
                               Height);
 
-  BitmapWidth = Width;
-  BitmapHeight = Height;
+  Buffer->Width = Width;
+  Buffer->Height = Height;
+  Buffer->BytesPerPixel = 4;
+  Buffer->Pitch = Width * Buffer->BytesPerPixel; // number of bytes in a row of pixels
 
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "allocating new bitmap memory");
-  int BitmapMemorySize = (Width * Height) * BytesPerPixel;
-  BitmapMemory = malloc(BitmapMemorySize);
+  int BitmapMemorySize = (Width * Height) * Buffer->BytesPerPixel;
+  Buffer->Memory = malloc(BitmapMemorySize);
 
-  RenderWeirdGradient(0,0);
+  RenderWeirdGradient(GlobalBackBuffer, 0,0);
 }
 
 internal void
-SDLDisplayBufferInWindow(SDL_Renderer *Renderer)
+SDLDisplayBufferInWindow(sdl_offscreen_buffer Buffer, SDL_Renderer *Renderer)
 {
   // Give our new texture fresh pixel data.
   // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
-  int Pitch = BitmapWidth * BytesPerPixel; // number of bytes in a row of pixels
-  if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, Pitch))
+  if (SDL_UpdateTexture(Buffer.Texture, NULL, Buffer.Memory, Buffer.Pitch))
   {
     // TODO: Handle error.
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Error updating texture map: %s", SDL_GetError());
   }
   // Copy the texture to the screen.
   SDL_RenderCopy(Renderer,
-                 Texture,
+                 Buffer.Texture,
                  NULL, // Source rectangle (NULL means whole texture)
                  NULL  // Destination rectangle (NULL means whole texture)
                  );
@@ -249,18 +255,17 @@ SDLDisplayBufferInWindow(SDL_Renderer *Renderer)
 }
 
 internal void
-RenderWeirdGradient(int XOffset, int YOffset)
+RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset)
 {
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
-  int Pitch = BitmapWidth * BytesPerPixel; // number of bytes in a row of pixels
-  Uint8 *Row = (Uint8 *)BitmapMemory;
+  Uint8 *Row = (Uint8 *)Buffer.Memory;
   for(int Y = 0;
-      Y < BitmapHeight;
+      Y < Buffer.Height;
       ++Y)
   {
     Uint32 *Pixel = (Uint32 *)Row;
     for(int X = 0;
-        X < BitmapWidth;
+        X < Buffer.Width;
         ++X)
     {
       /*
@@ -269,15 +274,16 @@ RenderWeirdGradient(int XOffset, int YOffset)
        * Memory:    RR GG BB xx
        * Register:  xx GG BB RR
        */
-      Uint8 Blue = ( X + XOffset );
-      Uint8 Green = ( Y + YOffset );
+      Uint8 Blue = (X + XOffset);
+      Uint8 Green = (Y + YOffset);
       Uint8 Red = 0;
       // Uint8 Padding = 0;
 
+      // Write the pixel to our buffer.
       *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
     }
 
-    // Move pointer to the next row.
-    Row += Pitch;
+    // Move to the next row.
+    Row += Buffer.Pitch;
   }
 }
