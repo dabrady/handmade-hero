@@ -259,27 +259,23 @@ RenderWeirdGradient(int XOffset, int YOffset)
       Y < BitmapHeight;
       ++Y)
   {
-    Uint8 *Pixel = (Uint8 *)Row;
+    Uint32 *Pixel = (Uint32 *)Row;
     for(int X = 0;
         X < BitmapWidth;
         ++X)
     {
       /*
-       * Pixel in memory:  BB GG RR xx
+       * Pixel (32 bits) structure:
        *
-       * 0x xxRRGGBB
+       * Memory:    RR GG BB xx
+       * Register:  xx GG BB RR
        */
-      *Pixel = (Uint8)(X / 0.6 * 1.2 - Y + XOffset);
-      ++Pixel;
+      Uint8 Blue = ( X + XOffset );
+      Uint8 Green = ( Y + YOffset );
+      Uint8 Red = 0;
+      // Uint8 Padding = 0;
 
-      *Pixel = (Uint8)(Y / 2 * 1.2 + X + YOffset);
-      ++Pixel;
-
-      *Pixel = (Uint8)X - Y / 0.3;
-      ++Pixel;
-
-      *Pixel = 0;
-      ++Pixel;
+      *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
     }
 
     // Move pointer to the next row.
