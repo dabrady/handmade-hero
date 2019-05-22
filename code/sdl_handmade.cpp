@@ -29,7 +29,6 @@ global_variable bool Running;
 global_variable sdl_offscreen_buffer GlobalBackBuffer;
 
 /* Forward declarations */
-internal int SDLWindowResizeEventFilter(void *Data, SDL_Event *Event);
 internal void SDLHandleEvent(SDL_Event *Event);
 internal sdl_window_dimension SDLGetWindowDimension(SDL_Window *Window);
 internal void SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width, int Height);
@@ -86,7 +85,6 @@ int main(int ArgCount, char **ArgValues)
 
   // Main event loop
   Running = true;
-  SDL_AddEventWatch(SDLWindowResizeEventFilter, Window);
   int XOffset = 0;
   int YOffset = 0;
   while(Running) {
@@ -109,63 +107,13 @@ int main(int ArgCount, char **ArgValues)
 
 // ********
 
-internal int
-SDLWindowResizeEventFilter(void *Data, SDL_Event *Event)
-{
-  switch(Event->type) {
-    case SDL_WINDOWEVENT:
-    {
-      switch(Event->window.event) {
-        case SDL_WINDOWEVENT_SIZE_CHANGED:
-        {
-          SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
-          // Ensure this event came from our main window.
-          if( Window == (SDL_Window *) Data ) {
-            // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window size changed: (%d x %d)", Event->window.data1, Event->window.data2);
-
-            int Width = Event->window.data1;
-            int Height = Event->window.data2;
-            // SDL_GetWindowSize(Window, &Width, &Height);
-
-            // Update our buffer for next paint.
-            SDL_Renderer *Renderer = SDL_GetRenderer(Window);
-            SDLResizeBuffer(&GlobalBackBuffer, Renderer, Width, Height);
-          }
-        } break;
-
-        // case SDL_WINDOWEVENT_RESIZED:
-        // {
-          // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Window resized: (%d x %d)", Event->window.data1, Event->window.data2);
-        // } break;
-      }
-    } break;
-
-    default:
-    {
-    } break;
-  }
-
-  return(0);
-}
-
 internal void
 SDLHandleEvent(SDL_Event *Event)
 {
   switch(Event->type) {
-    // case SDL_QUIT:
-    // {
-    //   // TODO: Handle this with an error?
-    //   Running = false;
-    // } break;
-
     case SDL_WINDOWEVENT:
     {
       switch(Event->window.event) {
-        case SDL_WINDOWEVENT_FOCUS_GAINED:
-        {
-          // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "window gained focus");
-        } break;
-
         case SDL_WINDOWEVENT_CLOSE:
         {
           // TODO: Handle this with message to the user?
