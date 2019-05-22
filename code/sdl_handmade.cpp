@@ -61,8 +61,8 @@ int main(int ArgCount, char **ArgValues)
   SDL_Window *Window = SDL_CreateWindow("Handmade Hero",         // const char* title,
                                         SDL_WINDOWPOS_UNDEFINED, // int         x,
                                         SDL_WINDOWPOS_UNDEFINED, // int         y,
-                                        640,                     // int         w,
-                                        480,                     // int         h,
+                                        1280,                     // int         w,
+                                        720,                     // int         h,
                                         WindowFlags              // Uint32      flags
                                         );
   // Check if the window creation was successful.
