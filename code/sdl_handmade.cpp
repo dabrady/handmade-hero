@@ -8,15 +8,13 @@
 #define local_persist static
 #define global_variable static
 
-// The size of a pixel, in bytes
-#define BYTES_PER_PIXEL 4
-
 /* Globals */
 global_variable bool Running;
 global_variable SDL_Texture *Texture;
 global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
 global_variable int BitmapHeight;
+global_variable int BytesPerPixel = 4;
 
 /* Forward declarations */
 internal int WindowResizeEventFilter(void *Data, SDL_Event *Event);
@@ -222,7 +220,7 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
   BitmapHeight = Height;
 
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "allocating new bitmap memory");
-  int BitmapMemorySize = (Width * Height) * BYTES_PER_PIXEL;
+  int BitmapMemorySize = (Width * Height) * BytesPerPixel;
   BitmapMemory = malloc(BitmapMemorySize);
 
   RenderWeirdGradient(0,0);
@@ -233,7 +231,7 @@ UpdateWindow(SDL_Renderer *Renderer)
 {
   // Give our new texture fresh pixel data.
   // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
-  int Pitch = BitmapWidth * BYTES_PER_PIXEL; // number of bytes in a row of pixels
+  int Pitch = BitmapWidth * BytesPerPixel; // number of bytes in a row of pixels
   if (SDL_UpdateTexture(Texture, NULL, BitmapMemory, Pitch))
   {
     // TODO: Handle error.
@@ -253,7 +251,7 @@ internal void
 RenderWeirdGradient(int XOffset, int YOffset)
 {
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
-  int Pitch = BitmapWidth * BYTES_PER_PIXEL; // number of bytes in a row of pixels
+  int Pitch = BitmapWidth * BytesPerPixel; // number of bytes in a row of pixels
   Uint8 *Row = (Uint8 *)BitmapMemory;
   for(int Y = 0;
       Y < BitmapHeight;
