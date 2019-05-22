@@ -19,12 +19,19 @@ struct sdl_offscreen_buffer
   int BytesPerPixel;
 };
 
+struct sdl_window_dimension
+{
+  int Width;
+  int Height;
+};
+
 global_variable bool Running;
 global_variable sdl_offscreen_buffer GlobalBackBuffer;
 
 /* Forward declarations */
 internal int SDLWindowResizeEventFilter(void *Data, SDL_Event *Event);
 internal void SDLHandleEvent(SDL_Event *Event);
+internal sdl_window_dimension SDLGetWindowDimension(SDL_Window *Window);
 internal void SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width, int Height);
 internal void SDLDisplayBufferInWindow(sdl_offscreen_buffer Buffer, SDL_Renderer *Renderer);
 internal void RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset);
@@ -74,9 +81,8 @@ int main(int ArgCount, char **ArgValues)
     return(1);
   }
 
-  int Width, Height;
-  SDL_GetWindowSize(Window, &Width, &Height);
-  SDLResizeBuffer(&GlobalBackBuffer, Renderer, Width, Height);
+  sdl_window_dimension Dimension = SDLGetWindowDimension(Window);
+  SDLResizeBuffer(&GlobalBackBuffer, Renderer, Dimension.Width, Dimension.Height);
 
   // Main event loop
   Running = true;
@@ -183,6 +189,14 @@ SDLHandleEvent(SDL_Event *Event)
       // SDL_LogDebug("default");
     } break;
   }
+}
+
+internal sdl_window_dimension
+SDLGetWindowDimension(SDL_Window *Window)
+{
+  sdl_window_dimension Result;
+  SDL_GetWindowSize(Window, &Result.Width, &Result.Height);
+  return(Result);
 }
 
 internal void
