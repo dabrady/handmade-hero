@@ -10,6 +10,7 @@
 
 /* Globals */
 global_variable bool Running;
+
 global_variable SDL_Texture *Texture;
 global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
@@ -17,10 +18,10 @@ global_variable int BitmapHeight;
 global_variable int BytesPerPixel = 4;
 
 /* Forward declarations */
-internal int WindowResizeEventFilter(void *Data, SDL_Event *Event);
-internal void HandleEvent(SDL_Event *Event);
-internal void ResizeTexture(SDL_Renderer *Renderer, int Width, int Height);
-internal void UpdateWindow(SDL_Renderer *Renderer);
+internal int SDLWindowResizeEventFilter(void *Data, SDL_Event *Event);
+internal void SDLHandleEvent(SDL_Event *Event);
+internal void SDLResizeBuffer(SDL_Renderer *Renderer, int Width, int Height);
+internal void SDLDisplayBufferInWindow(SDL_Renderer *Renderer);
 internal void RenderWeirdGradient(int XOffset, int YOffset);
 
 int main(int ArgCount, char **ArgValues)
@@ -70,11 +71,11 @@ int main(int ArgCount, char **ArgValues)
 
   int Width, Height;
   SDL_GetWindowSize(Window, &Width, &Height);
-  ResizeTexture(Renderer, Width, Height);
+  SDLResizeBuffer(Renderer, Width, Height);
 
   // Main event loop
   Running = true;
-  SDL_AddEventWatch(WindowResizeEventFilter, Window);
+  SDL_AddEventWatch(SDLWindowResizeEventFilter, Window);
   int XOffset = 0;
   int YOffset = 0;
   while(Running) {
@@ -84,11 +85,11 @@ int main(int ArgCount, char **ArgValues)
       {
         Running = false;
       }
-      HandleEvent(&Event);
+      SDLHandleEvent(&Event);
     }
 
     RenderWeirdGradient(XOffset, YOffset);
-    UpdateWindow(Renderer);
+    SDLDisplayBufferInWindow(Renderer);
     ++XOffset;
   }
 
@@ -98,7 +99,7 @@ int main(int ArgCount, char **ArgValues)
 // ********
 
 internal int
-WindowResizeEventFilter(void *Data, SDL_Event *Event)
+SDLWindowResizeEventFilter(void *Data, SDL_Event *Event)
 {
   switch(Event->type) {
     case SDL_WINDOWEVENT:
@@ -117,7 +118,7 @@ WindowResizeEventFilter(void *Data, SDL_Event *Event)
 
             // Update our buffer for next paint.
             SDL_Renderer *Renderer = SDL_GetRenderer(Window);
-            ResizeTexture(Renderer, Width, Height);
+            SDLResizeBuffer(Renderer, Width, Height);
           }
         } break;
 
@@ -137,7 +138,7 @@ WindowResizeEventFilter(void *Data, SDL_Event *Event)
 }
 
 internal void
-HandleEvent(SDL_Event *Event)
+SDLHandleEvent(SDL_Event *Event)
 {
   switch(Event->type) {
     // case SDL_QUIT:
@@ -167,7 +168,7 @@ HandleEvent(SDL_Event *Event)
 
           SDL_Window *Window = SDL_GetWindowFromID(Event->window.windowID);
           SDL_Renderer *Renderer = SDL_GetRenderer(Window);
-          UpdateWindow(Renderer);
+          SDLDisplayBufferInWindow(Renderer);
         } break;
       }
     } break;
@@ -180,7 +181,7 @@ HandleEvent(SDL_Event *Event)
 }
 
 internal void
-ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
+SDLResizeBuffer(SDL_Renderer *Renderer, int Width, int Height)
 {
   // TODO: Bulletproof this.
   // Maybe don't free first, free after, then free first if that fails.
@@ -227,7 +228,7 @@ ResizeTexture(SDL_Renderer *Renderer, int Width, int Height)
 }
 
 internal void
-UpdateWindow(SDL_Renderer *Renderer)
+SDLDisplayBufferInWindow(SDL_Renderer *Renderer)
 {
   // Give our new texture fresh pixel data.
   // TODO: Should we use SDL_{Lock,Unlock}Texture instead?
