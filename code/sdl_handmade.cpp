@@ -32,7 +32,7 @@ global_variable bool Running;
 global_variable sdl_offscreen_buffer GlobalBackBuffer;
 
 /* Forward declarations */
-internal void SDLHandleEvent(SDL_Event *Event);
+internal void SDLHandleEvent(SDL_Event *Event, int *XOffset, int *YOffset);
 internal sdl_window_dimension SDLGetWindowDimension(SDL_Window *Window);
 internal void SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width, int Height);
 internal void SDLDisplayBufferInWindow(sdl_offscreen_buffer Buffer, SDL_Renderer *Renderer);
@@ -44,7 +44,7 @@ internal void SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONT
 
 int main()
 {
-#if 0
+#if 1
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
@@ -92,6 +92,7 @@ int main()
   SDLResizeBuffer(&GlobalBackBuffer, Renderer, Dimension.Width, Dimension.Height);
 
   // Initialize any game controllers plugged in at the start of our game.
+  // TODO: Enable haptics
   SDL_GameController *Controllers[MAX_CONTROLLERS];
   SDLStartGameControllers(Controllers);
 
@@ -106,15 +107,49 @@ int main()
       {
         Running = false;
       }
-      SDLHandleEvent(&Event);
+      SDLHandleEvent(&Event, &XOffset, &YOffset);
     }
 
     // Input handling
+    for (int ControllerIndex = 0;
+         ControllerIndex < MAX_CONTROLLERS;
+         ++ControllerIndex)
+    {
+      SDL_GameController *Controller = Controllers[ControllerIndex];
+      if (SDL_GameControllerGetAttached(Controller))
+      {
+        bool Up = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_DPAD_UP);
+        bool Down = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+        bool Left = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+        bool Right = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+        bool Start = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_START);
+        bool Back = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_BACK);
+        bool LeftShoulder = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+        bool RightShoulder = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+        bool AButton = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_A);
+        bool BButton = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_B);
+        bool XButton = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_X);
+        bool YButton = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_Y);
+
+        Sint16 StickX = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTX);
+        Sint16 StickY = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTY);
+
+        // Control side-scrolling with joystick.
+        XOffset += StickX >> 8;
+        XOffset += StickY >> 8;
+
+        // TODO: Rumble support
+      }
+      else
+      {
+        // TODO: Controller not plugged in anymore; do something about it.
+      }
+    }
 
     // Screen drawing
     RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
-    ++XOffset;
+    // ++XOffset;
   }
 
   // Clean up our game controllers
@@ -126,7 +161,7 @@ int main()
 // ********
 
 internal void
-SDLHandleEvent(SDL_Event *Event)
+SDLHandleEvent(SDL_Event *Event, int* XOffset, int *YOffset)
 {
   switch(Event->type) {
     case SDL_WINDOWEVENT:
@@ -147,6 +182,88 @@ SDLHandleEvent(SDL_Event *Event)
           SDL_Renderer *Renderer = SDL_GetRenderer(Window);
           SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
         } break;
+      }
+    } break;
+
+    case SDL_KEYUP:
+    case SDL_KEYDOWN:
+    {
+      SDL_Keycode KeyCode = Event->key.keysym.sym;
+      bool WasDown = (Event->key.state == SDL_RELEASED) || Event->key.repeat;
+      bool IsDown = Event->key.state == SDL_PRESSED;
+
+      if (IsDown != WasDown)
+      {
+        switch(KeyCode)
+        {
+          case SDLK_w:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "w");
+            *YOffset += 12;
+          } break;
+
+          case SDLK_a:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "a");
+            *XOffset += 12;
+          } break;
+
+          case SDLK_s:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "s");
+            *YOffset -= 12;
+          } break;
+
+          case SDLK_d:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "d");
+            *XOffset -= 12;
+          } break;
+
+          case SDLK_q:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "q");
+          } break;
+
+          case SDLK_e:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "e");
+          } break;
+
+          case SDLK_UP:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "up");
+          } break;
+
+          case SDLK_DOWN:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "down");
+          } break;
+
+          case SDLK_LEFT:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "left");
+          } break;
+
+          case SDLK_RIGHT:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "right");
+          } break;
+
+          case SDLK_ESCAPE:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "escape");
+          } break;
+
+          case SDLK_SPACE:
+          {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "space");
+          } break;
+
+          default:
+          {
+          } break;
+        }
       }
     } break;
 
