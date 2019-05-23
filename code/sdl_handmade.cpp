@@ -8,6 +8,9 @@
 #define local_persist static
 #define global_variable static
 
+// The maximum number of game controllers we'll allow to be used at once
+#define MAX_CONTROLLERS 4
+
 /* Globals */
 struct sdl_offscreen_buffer
 {
@@ -35,14 +38,19 @@ internal void SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Render
 internal void SDLDisplayBufferInWindow(sdl_offscreen_buffer Buffer, SDL_Renderer *Renderer);
 internal void RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset);
 
-int main(int ArgCount, char **ArgValues)
+// The `Foo *(&X)[BAR]` syntax in a type signature means "X is a reference to an array of pointers to Foo and has a size of BAR".
+internal void SDLStartGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS]);
+internal void SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS]);
+
+int main()
 {
-#if 1
+#if 0
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
   Uint32 Subsystems =
-    SDL_INIT_VIDEO; // graphics and window management
+      SDL_INIT_VIDEO           // graphics and window management
+    | SDL_INIT_GAMECONTROLLER; // game controllers and joysticks
 
   // Initialize SDL
   if (SDL_InitSubSystem(Subsystems) != 0) {
@@ -83,6 +91,10 @@ int main(int ArgCount, char **ArgValues)
   sdl_window_dimension Dimension = SDLGetWindowDimension(Window);
   SDLResizeBuffer(&GlobalBackBuffer, Renderer, Dimension.Width, Dimension.Height);
 
+  // Initialize any game controllers plugged in at the start of our game.
+  SDL_GameController *Controllers[MAX_CONTROLLERS];
+  SDLStartGameControllers(Controllers);
+
   // Main event loop
   Running = true;
   int XOffset = 0;
@@ -97,10 +109,16 @@ int main(int ArgCount, char **ArgValues)
       SDLHandleEvent(&Event);
     }
 
+    // Input handling
+
+    // Screen drawing
     RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
     ++XOffset;
   }
+
+  // Clean up our game controllers
+  SDLStopGameControllers(Controllers);
 
   return(0);
 }
@@ -247,5 +265,44 @@ RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset)
 
     // Move to the next row.
     Row += Buffer.Pitch;
+  }
+}
+
+internal void
+SDLStartGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS])
+{
+  int MaxJoysticks = SDL_NumJoysticks();
+  int NumControllers = 0;
+  for (int JoystickIndex = 0;
+       JoystickIndex < MaxJoysticks;
+       ++JoystickIndex)
+  {
+    if (NumControllers >= MAX_CONTROLLERS)
+    {
+      // Ignore any additional controllers
+      break;
+    }
+
+    if (!SDL_IsGameController(JoystickIndex))
+    {
+      // Ignore any unsupported controllers
+      continue;
+    }
+
+    // Initialize the controller and save a reference to it
+    SDL_GameController *Controller = SDL_GameControllerOpen(JoystickIndex);
+    Controllers[NumControllers++] = Controller;
+  }
+}
+
+internal void
+SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS])
+{
+  for (int ControllerIndex = 0;
+       ControllerIndex < MAX_CONTROLLERS;
+       ++ControllerIndex)
+  {
+    SDL_GameController *Controller = Controllers[ControllerIndex];
+    SDL_GameControllerClose(Controller);
   }
 }
