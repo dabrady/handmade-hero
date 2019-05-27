@@ -42,6 +42,9 @@ internal void RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int 
 internal void SDLStartGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS]);
 internal void SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS]);
 
+internal SDL_AudioDeviceID SDLInitializeAudio(int SamplesPerSecond, Uint16 BufferSize);
+internal void SDLWriteToSoundBuffer(void* UserData, Uint8* AudioStream, int SampleLength);
+
 int main()
 {
 #if 1
@@ -50,7 +53,8 @@ int main()
 
   Uint32 Subsystems =
       SDL_INIT_VIDEO           // graphics and window management
-    | SDL_INIT_GAMECONTROLLER; // game controllers and joysticks
+    | SDL_INIT_GAMECONTROLLER  // game controllers and joysticks
+    | SDL_INIT_AUDIO;          // audio system
 
   // Initialize SDL
   if (SDL_InitSubSystem(Subsystems) != 0) {
@@ -61,6 +65,12 @@ int main()
 
   // Shutdown SDL on exit
   atexit(SDL_Quit);
+
+  // Setup audio system
+  int AudioSampleRate = 48000; // samples per second
+  Uint16 AudioBufferSize = 2 * AudioSampleRate * sizeof(Uint16); // 2 seconds' worth of samples
+  SDL_AudioDeviceID AudioDevice = SDLInitializeAudio(AudioSampleRate, AudioBufferSize);
+  SDL_PauseAudioDevice(AudioDevice, 0); // audio starts paused: a value of 0 here unpauses it
 
   // Setup initial Window
   Uint32 WindowFlags =
@@ -154,6 +164,8 @@ int main()
 
   // Clean up our game controllers
   SDLStopGameControllers(Controllers);
+  // Close our audio output
+  SDL_CloseAudioDevice(AudioDevice);
 
   return(0);
 }
@@ -422,4 +434,38 @@ SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS])
     SDL_GameController *Controller = Controllers[ControllerIndex];
     SDL_GameControllerClose(Controller);
   }
+}
+
+internal SDL_AudioDeviceID
+SDLInitializeAudio(int SamplesPerSecond, Uint16 BufferSize)
+{
+  SDL_AudioSpec DesiredSettings, ActualSettings;
+
+  SDL_memset(&DesiredSettings, 0, sizeof(DesiredSettings)); // zero-out the memory
+  DesiredSettings.freq = SamplesPerSecond;
+  DesiredSettings.format = AUDIO_S16LSB; // signed 16-bit samples in little-endian byte order
+  DesiredSettings.channels = 2;
+  DesiredSettings.samples = BufferSize;
+  DesiredSettings.callback = &SDLWriteToSoundBuffer;
+
+  SDL_AudioDeviceID OpenedAudioDevice = SDL_OpenAudioDevice(0, 0, &DesiredSettings, &ActualSettings, SDL_AUDIO_ALLOW_ANY_CHANGE);
+  if (!OpenedAudioDevice)
+  {
+    // TODO: We failed to open the audio device. Do something about it.
+  }
+
+  if (ActualSettings.format != DesiredSettings.format)
+  {
+    // TODO: We didn't get the settings we wanted. Figure out how to handle this.
+  }
+
+  return(OpenedAudioDevice);
+}
+
+internal void
+SDLWriteToSoundBuffer(void* UserData, Uint8* AudioStream, int SampleLength)
+{
+  // Just write 'silence' for now.
+  // TODO: Write actual audio.
+  SDL_memset(AudioStream, 0, SampleLength);
 }
