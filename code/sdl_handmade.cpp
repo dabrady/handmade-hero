@@ -57,7 +57,8 @@ int main()
     | SDL_INIT_AUDIO;          // audio system
 
   // Initialize SDL
-  if (SDL_InitSubSystem(Subsystems) != 0) {
+  if (SDL_InitSubSystem(Subsystems) != 0)
+  {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialize SDL: %s", SDL_GetError());
     return(1);
   }
@@ -78,12 +79,12 @@ int main()
   SDL_Window *Window = SDL_CreateWindow("Handmade Hero",         // const char* title,
                                         SDL_WINDOWPOS_UNDEFINED, // int         x,
                                         SDL_WINDOWPOS_UNDEFINED, // int         y,
-                                        1280,                     // int         w,
+                                        1280,                    // int         w,
                                         720,                     // int         h,
-                                        WindowFlags              // Uint32      flags
-                                        );
+                                        WindowFlags);            // Uint32      flags
   // Check if the window creation was successful.
-  if (Window == NULL) {
+  if (Window == NULL)
+  {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create main application window: %s", SDL_GetError());
     return(1);
   }
@@ -93,7 +94,8 @@ int main()
   int AUTODETECT_DRIVER = -1;
   Uint32 RenderFlags = 0;
   SDL_Renderer *Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
-  if(Renderer == NULL) {
+  if(Renderer == NULL)
+  {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create rendering context: %s", SDL_GetError());
     return(1);
   }
@@ -110,9 +112,11 @@ int main()
   Running = true;
   int XOffset = 0;
   int YOffset = 0;
-  while(Running) {
+  while(Running)
+  {
     SDL_Event Event;
-    while(SDL_PollEvent(&Event)) {
+    while(SDL_PollEvent(&Event))
+    {
       if(Event.type == SDL_QUIT)
       {
         Running = false;
@@ -175,10 +179,12 @@ int main()
 internal void
 SDLHandleEvent(SDL_Event *Event, int* XOffset, int *YOffset)
 {
-  switch(Event->type) {
+  switch(Event->type)
+  {
     case SDL_WINDOWEVENT:
     {
-      switch(Event->window.event) {
+      switch(Event->window.event)
+      {
         case SDL_WINDOWEVENT_CLOSE:
         {
           // TODO: Handle this with message to the user?
