@@ -68,10 +68,18 @@ int main()
   atexit(SDL_Quit);
 
   // Setup audio system
-  int AudioSampleRate = 48000; // samples per second
-  Uint16 AudioBufferSize = 2 * AudioSampleRate * sizeof(Uint16); // 2 seconds' worth of samples
-  SDL_AudioDeviceID AudioDevice = SDLInitializeAudio(AudioSampleRate, AudioBufferSize);
-  SDL_PauseAudioDevice(AudioDevice, 0); // audio starts paused: a value of 0 here unpauses it
+  int AudioSamplesPerSecond = 48000; // sample rate
+  int AudioSampleCount = AudioSamplesPerSecond / 60;
+  int AudioToneHz = 256; // close to a middle C note
+  Sint16 AudioToneVolume = 3000;
+  Uint32 RunningSampleIndex = 0;
+  int SquareWavePeriod = AudioSamplesPerSecond / AudioToneHz;
+  int HalfSquareWavePeriod = SquareWavePeriod / 2;
+  int BytesPerAudioSample = sizeof(Sint16) * 2;
+  int TargetAudioQueueBytes = AudioSamplesPerSecond * BytesPerAudioSample;
+  bool SoundIsPlaying = false;
+
+  SDL_AudioDeviceID AudioDevice = SDLInitializeAudio(AudioSamplesPerSecond, AudioSampleCount);
 
   // Setup initial Window
   Uint32 WindowFlags =
@@ -163,7 +171,31 @@ int main()
     // Screen drawing
     RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
-    // ++XOffset;
+
+    // Audio generation
+    int BytesToWrite = AudioSampleCount * BytesPerAudioSample; // TargetAudioQueueBytes - SDL_GetQueuedAudioSize(AudioDevice);
+    if (BytesToWrite)
+    {
+      void *SoundBuffer = malloc(BytesToWrite);
+      Sint16 *AudioSampleOutput = (Sint16 *)SoundBuffer;
+      for (int AudioSampleIndex = 0;
+           AudioSampleIndex < AudioSampleCount;
+           AudioSampleIndex++)
+      {
+        Sint16 AudioSampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? AudioToneHz : -AudioToneHz;
+        // Write to both audio channels (i.e. left and right in a stereo setting).
+        *AudioSampleOutput++ = AudioSampleValue;
+        *AudioSampleOutput++ = AudioSampleValue;
+      }
+      SDL_QueueAudio(AudioDevice, SoundBuffer, BytesToWrite);
+      free(SoundBuffer);
+      if(!SoundIsPlaying)
+      {
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "unpausing audio");
+        SoundIsPlaying = true;
+        SDL_PauseAudioDevice(AudioDevice, 0); // audio starts paused: a value of 0 here unpauses it
+      }
+    }
   }
 
   // Clean up our game controllers
@@ -452,26 +484,20 @@ SDLInitializeAudio(int SamplesPerSecond, Uint16 BufferSize)
   DesiredSettings.format = AUDIO_S16LSB; // signed 16-bit samples in little-endian byte order
   DesiredSettings.channels = 2;
   DesiredSettings.samples = BufferSize;
-  DesiredSettings.callback = &SDLWriteToSoundBuffer;
+  DesiredSettings.callback = NULL;
 
   SDL_AudioDeviceID OpenedAudioDevice = SDL_OpenAudioDevice(0, 0, &DesiredSettings, &ActualSettings, SDL_AUDIO_ALLOW_ANY_CHANGE);
   if (!OpenedAudioDevice)
   {
     // TODO: We failed to open the audio device. Do something about it.
+    SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialize audio: %s", SDL_GetError());
   }
 
   if (ActualSettings.format != DesiredSettings.format)
   {
     // TODO: We didn't get the settings we wanted. Figure out how to handle this.
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialize audio with desired format: %s", SDL_GetError());
   }
 
   return(OpenedAudioDevice);
-}
-
-internal void
-SDLWriteToSoundBuffer(void* UserData, Uint8* AudioStream, int SampleLength)
-{
-  // Just write 'silence' for now.
-  // TODO: Write actual audio.
-  SDL_memset(AudioStream, 0, SampleLength);
 }
