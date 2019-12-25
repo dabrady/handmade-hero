@@ -1,7 +1,7 @@
 #include <SDL.h>
 #include <stdlib.h>
 
-/* Macros */
+/* Macros and type aliases */
 
 // The many faces of 'static'
 #define internal static
@@ -10,6 +10,20 @@
 
 // The maximum number of game controllers we'll allow to be used at once
 #define MAX_CONTROLLERS 4
+
+typedef Sint8 int8;
+typedef Sint16 int16;
+typedef Sint32 int32;
+typedef Sint64 int64;
+typedef int32 bool32;
+
+typedef Uint8 uint8;
+typedef Uint16 uint16;
+typedef Uint32 uint32;
+typedef Uint64 uint64;
+
+typedef float real32;
+typedef double real64;
 
 /* Globals */
 struct sdl_offscreen_buffer
@@ -42,8 +56,8 @@ internal void RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int 
 internal void SDLStartGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS]);
 internal void SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS]);
 
-internal SDL_AudioDeviceID SDLInitializeAudio(int SamplesPerSecond, Uint16 BufferSize);
-internal void SDLWriteToSoundBuffer(void* UserData, Uint8* AudioStream, int SampleLength);
+internal SDL_AudioDeviceID SDLInitializeAudio(int SamplesPerSecond, uint16 BufferSize);
+internal void SDLWriteToSoundBuffer(void* UserData, uint8* AudioStream, int SampleLength);
 
 int main()
 {
@@ -51,7 +65,7 @@ int main()
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
-  Uint32 Subsystems =
+  uint32 Subsystems =
       SDL_INIT_VIDEO           // graphics and window management
     | SDL_INIT_GAMECONTROLLER  // game controllers and joysticks
     | SDL_INIT_AUDIO;          // audio system
@@ -71,25 +85,25 @@ int main()
   int AudioSamplesPerSecond = 48000; // sample rate
   int AudioSampleCount = AudioSamplesPerSecond / 60;
   int AudioToneHz = 256; // close to a middle C note
-  Sint16 AudioToneVolume = 3000;
-  Uint32 RunningSampleIndex = 0;
+  int16 AudioToneVolume = 3000;
+  uint32 RunningSampleIndex = 0;
   int SquareWavePeriod = AudioSamplesPerSecond / AudioToneHz;
   int HalfSquareWavePeriod = SquareWavePeriod / 2;
-  int BytesPerAudioSample = sizeof(Sint16) * 2;
+  int BytesPerAudioSample = sizeof(int16) * 2;
   int TargetAudioQueueBytes = AudioSamplesPerSecond * BytesPerAudioSample;
   bool SoundIsPlaying = false;
 
   SDL_AudioDeviceID AudioDevice = SDLInitializeAudio(AudioSamplesPerSecond, AudioSampleCount);
 
   // Setup initial Window
-  Uint32 WindowFlags =
+  uint32 WindowFlags =
     SDL_WINDOW_RESIZABLE;
   SDL_Window *Window = SDL_CreateWindow("Handmade Hero",         // const char* title,
                                         SDL_WINDOWPOS_UNDEFINED, // int         x,
                                         SDL_WINDOWPOS_UNDEFINED, // int         y,
                                         1280,                    // int         w,
                                         720,                     // int         h,
-                                        WindowFlags);            // Uint32      flags
+                                        WindowFlags);            // uint32      flags
   // Check if the window creation was successful.
   if (Window == NULL)
   {
@@ -100,7 +114,7 @@ int main()
 
   // Setup a rendering context.
   int AUTODETECT_DRIVER = -1;
-  Uint32 RenderFlags = 0;
+  uint32 RenderFlags = 0;
   SDL_Renderer *Renderer = SDL_CreateRenderer(Window, AUTODETECT_DRIVER, RenderFlags);
   if(Renderer == NULL)
   {
@@ -153,8 +167,8 @@ int main()
         bool XButton = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_X);
         bool YButton = SDL_GameControllerGetButton(Controller, SDL_CONTROLLER_BUTTON_Y);
 
-        Sint16 StickX = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTX);
-        Sint16 StickY = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTY);
+        int16 StickX = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTX);
+        int16 StickY = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTY);
 
         // Control side-scrolling with joystick.
         XOffset += StickX >> 8;
@@ -177,12 +191,12 @@ int main()
     if (BytesToWrite)
     {
       void *SoundBuffer = malloc(BytesToWrite);
-      Sint16 *AudioSampleOutput = (Sint16 *)SoundBuffer;
+      int16 *AudioSampleOutput = (int16 *)SoundBuffer;
       for (int AudioSampleIndex = 0;
            AudioSampleIndex < AudioSampleCount;
            AudioSampleIndex++)
       {
-        Sint16 AudioSampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? AudioToneHz : -AudioToneHz;
+        int16 AudioSampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? AudioToneHz : -AudioToneHz;
         // Write to both audio channels (i.e. left and right in a stereo setting).
         *AudioSampleOutput++ = AudioSampleValue;
         *AudioSampleOutput++ = AudioSampleValue;
@@ -191,7 +205,7 @@ int main()
       free(SoundBuffer);
       if(!SoundIsPlaying)
       {
-        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "unpausing audio");
+        // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "unpausing audio");
         SoundIsPlaying = true;
         SDL_PauseAudioDevice(AudioDevice, 0); // audio starts paused: a value of 0 here unpauses it
       }
@@ -405,12 +419,12 @@ internal void
 RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset)
 {
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
-  Uint8 *Row = (Uint8 *)Buffer.Memory;
+  uint8 *Row = (uint8 *)Buffer.Memory;
   for(int Y = 0;
       Y < Buffer.Height;
       ++Y)
   {
-    Uint32 *Pixel = (Uint32 *)Row;
+    uint32 *Pixel = (uint32 *)Row;
     for(int X = 0;
         X < Buffer.Width;
         ++X)
@@ -421,10 +435,10 @@ RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset)
        * Memory:    RR GG BB xx
        * Register:  xx GG BB RR
        */
-      Uint8 Blue = (X + XOffset);
-      Uint8 Green = (Y + YOffset);
-      Uint8 Red = 0;
-      // Uint8 Padding = 0;
+      uint8 Blue = (X + XOffset);
+      uint8 Green = (Y + YOffset);
+      uint8 Red = 0;
+      // uint8 Padding = 0;
 
       // Write the pixel to our buffer.
       *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
@@ -475,7 +489,7 @@ SDLStopGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS])
 }
 
 internal SDL_AudioDeviceID
-SDLInitializeAudio(int SamplesPerSecond, Uint16 BufferSize)
+SDLInitializeAudio(int SamplesPerSecond, uint16 BufferSize)
 {
   SDL_AudioSpec DesiredSettings, ActualSettings;
 
