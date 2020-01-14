@@ -191,8 +191,8 @@ int main()
         int16 StickY = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTY);
 
         // Control side-scrolling with joystick.
-        XOffset += StickX >> 8;
-        XOffset += StickY >> 8;
+        XOffset += StickX / 4096;
+        XOffset += StickY / 4096;
 
         // TODO: Rumble support
       }
