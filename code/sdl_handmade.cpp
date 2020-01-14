@@ -192,7 +192,7 @@ int main()
 
         // Control side-scrolling with joystick.
         XOffset += StickX / 4096;
-        XOffset += StickY / 4096;
+        YOffset += StickY / 4096;
 
         // TODO: Rumble support
       }
