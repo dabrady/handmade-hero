@@ -12,6 +12,10 @@
 // The maximum number of game controllers we'll allow to be used at once
 #define MAX_CONTROLLERS 4
 
+// Device mappings for Nintendo Switch "Joy-Con" controllers
+#define JOY_CON_L_MAPPING "030000007e0500000620000001000000,Joy-Con (L),+leftx:h0.2,+lefty:h0.4,-leftx:h0.8,-lefty:h0.1,a:b0,b:b1,back:b13,leftshoulder:b4,leftstick:b10,rightshoulder:b5,start:b8,x:b2,y:b3"
+#define JOY_CON_R_MAPPING "030000007e0500000720000001000000,Joy-Con (R),+leftx:h0.2,+lefty:h0.4,-leftx:h0.8,-lefty:h0.1,a:b0,b:b1,back:b12,leftshoulder:b4,leftstick:b11,rightshoulder:b5,start:b9,x:b2,y:b3"
+
 #define Pi32 3.14159265359
 
 typedef Sint8 int8;
@@ -446,6 +450,15 @@ RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset)
 internal void
 SDLStartGameControllers(SDL_GameController *(&Controllers)[MAX_CONTROLLERS])
 {
+  if (SDL_GameControllerAddMapping(JOY_CON_L_MAPPING) == -1)
+  {
+    SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to add mapping for Joy-Con (L) controller: %s", SDL_GetError());
+  }
+  if (SDL_GameControllerAddMapping(JOY_CON_R_MAPPING) == -1)
+  {
+    SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to add mapping for Joy-Con (R) controller: %s", SDL_GetError());
+  }
+
   int MaxJoysticks = SDL_NumJoysticks();
   int NumControllers = 0;
   for (int JoystickIndex = 0;
