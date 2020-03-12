@@ -202,8 +202,12 @@ int main()
         int16 StickY = SDL_GameControllerGetAxis(Controller, SDL_CONTROLLER_AXIS_LEFTY);
 
         // Control side-scrolling with joystick.
-        XOffset += StickX / 4096;
-        YOffset += StickY / 4096;
+        XOffset += StickX / ( 4096 * 2 );
+        YOffset += StickY / ( 4096 * 2 );
+
+        // Control pitch with joystick
+        SoundOutput.ToneHz = 512 + (int)(256.0f*((real32)StickY / 30000.0f));
+        SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
 
         // TODO: Rumble support
       }
