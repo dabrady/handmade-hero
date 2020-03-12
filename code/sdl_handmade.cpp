@@ -59,6 +59,8 @@ struct sdl_sound_output
   int WavePeriod;
   int BytesPerSample;
   int BufferSize;
+  real32 tSine; // position in the sine wave
+  int LatencySampleCount; // how many samples we'll write at once
 };
 
 
@@ -104,13 +106,15 @@ int main()
   // Setup audio system
   sdl_sound_output SoundOutput = {};
   SoundOutput.SamplesPerSecond = 48000; // sample rate
+  SoundOutput.BytesPerSample = sizeof(int16) * 2;
   SoundOutput.SampleCount = SoundOutput.SamplesPerSecond / 60;
+  SoundOutput.BufferSize = SoundOutput.SampleCount * SoundOutput.BytesPerSample;
+  SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15; // sound latency: 1/15 of a second, aka 4 frames @ 60FPS
   SoundOutput.ToneHz = 256; // close to a middle C note
   SoundOutput.ToneVolume = 7000;
   SoundOutput.RunningSampleIndex = 0;
   SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
-  SoundOutput.BytesPerSample = sizeof(int16) * 2;
-  SoundOutput.BufferSize = SoundOutput.SampleCount * SoundOutput.BytesPerSample;
+  int TargetQueueBytes = SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample;
 
   SDL_AudioDeviceID AudioDevice = SDLInitializeAudio(SoundOutput.SamplesPerSecond, SoundOutput.SampleCount);
   SDL_PauseAudioDevice(AudioDevice, 0); // audio starts paused: a value of 0 here unpauses it
@@ -207,7 +211,7 @@ int main()
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
 
     // Audio generation
-    SDLFillSoundBuffer(AudioDevice, &SoundOutput, SoundOutput.BufferSize);
+    SDLFillSoundBuffer(AudioDevice, &SoundOutput, TargetQueueBytes - SDL_GetQueuedAudioSize(AudioDevice));
   }
 
   // Clean up our game controllers
@@ -534,13 +538,13 @@ SDLFillSoundBuffer(SDL_AudioDeviceID AudioDevice, sdl_sound_output* SoundOutput,
        AudioSampleIndex < SoundOutput->SampleCount;
        AudioSampleIndex++)
   {
-    real32 t = 2.0f * Pi32 * (real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod;
-    real32 SineValue = sinf(t);
+    real32 SineValue = sinf(SoundOutput->tSine);
     int16 AudioSampleValue = (int16)(SineValue * SoundOutput->ToneVolume);
     // Write to both audio channels (i.e. left and right in a stereo setting).
     *AudioSampleOutput++ = AudioSampleValue;
     *AudioSampleOutput++ = AudioSampleValue;
 
+    SoundOutput->tSine += 2.0f * Pi32 * 1.0f/(real32)SoundOutput->WavePeriod;
     ++SoundOutput->RunningSampleIndex;
   }
   SDL_QueueAudio(AudioDevice, SoundBuffer, BytesToWrite);
