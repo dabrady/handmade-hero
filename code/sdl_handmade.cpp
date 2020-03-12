@@ -14,7 +14,14 @@
 
 // Device mappings for Nintendo Switch "Joy-Con" controllers
 #define JOY_CON_L_MAPPING "030000007e0500000620000001000000,Joy-Con (L),+leftx:h0.2,+lefty:h0.4,-leftx:h0.8,-lefty:h0.1,a:b0,b:b1,back:b13,leftshoulder:b4,leftstick:b10,rightshoulder:b5,start:b8,x:b2,y:b3"
-#define JOY_CON_R_MAPPING "030000007e0500000720000001000000,Joy-Con (R),+leftx:h0.2,+lefty:h0.4,-leftx:h0.8,-lefty:h0.1,a:b0,b:b1,back:b12,leftshoulder:b4,leftstick:b11,rightshoulder:b5,start:b9,x:b2,y:b3"
+// #define JOY_CON_R_MAPPING "030000007e0500000720000001000000,Joy-Con (R),+leftx:h0.2,+lefty:h0.4,-leftx:h0.8,-lefty:h0.1,a:b0,b:b1,back:b12,leftshoulder:b4,leftstick:b11,rightshoulder:b5,start:b9,x:b2,y:b3"
+
+// Alternate mapping: physical letter buttons rotated 1 space counter-clockwise, to form:
+//      x
+//    y   a
+//      b
+// And (non?)inverted joystick: up goes up, down goes down, left goes left, right goes right.
+#define JOY_CON_R_MAPPING "030000007e0500000720000001000000,Joy-Con (R),+leftx:h0.8,+lefty:h0.1,-leftx:h0.2,-lefty:h0.4,a:b1,b:b0,back:b12,leftshoulder:b4,leftstick:b11,rightshoulder:b5,start:b9,x:b3,y:b2"
 
 #define Pi32 3.14159265359
 
