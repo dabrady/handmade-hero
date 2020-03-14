@@ -90,6 +90,8 @@ internal void SDLFillSoundBuffer(SDL_AudioDeviceID AudioDevice, sdl_sound_output
 
 int main()
 {
+  uint64 PerfCountFrequency = SDL_GetPerformanceFrequency();
+
 #if 1
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
@@ -165,6 +167,10 @@ int main()
   Running = true;
   int XOffset = 0;
   int YOffset = 0;
+
+  uint64 LastCounter = SDL_GetPerformanceCounter();
+  uint64 LastCycleCount = __rdtsc();
+
   while(Running)
   {
     SDL_Event Event;
@@ -222,7 +228,25 @@ int main()
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
 
     // Audio generation
-    SDLFillSoundBuffer(AudioDevice, &SoundOutput, TargetQueueBytes - SDL_GetQueuedAudioSize(AudioDevice));
+    // TODO Why does this introduce sound artifacts?
+    // int BytesToWrite = TargetQueueBytes - SDL_GetQueuedAudioSize(AudioDevice);
+    int BytesToWrite = SoundOutput.BufferSize;
+    SDLFillSoundBuffer(AudioDevice, &SoundOutput, BytesToWrite);
+
+    // Performance measurement / Dimensional analysis
+    uint64 EndCycleCount = __rdtsc();
+
+    uint64 EndCounter = SDL_GetPerformanceCounter();
+    uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
+    uint64 CounterElapsed = EndCounter - LastCounter;
+    real32 MSPerFrame = ((1000.0f*(real32)CounterElapsed) / (real32)PerfCountFrequency);
+    real32 FPS = ((real32)PerfCountFrequency / (real32)CounterElapsed);
+    real32 MCPF = ((real32)CyclesElapsed / (1000.0f*1000.0f));
+
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "%fms/f, %ff/s, %fmc/f", MSPerFrame, FPS, MCPF);
+
+    LastCounter = EndCounter;
+    LastCycleCount = EndCycleCount;
   }
 
   // Clean up our game controllers
