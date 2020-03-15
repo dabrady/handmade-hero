@@ -544,7 +544,10 @@ int main()
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
 
     // Audio generation
-    SDLFillSoundBuffer(AudioDevice, &SoundOutput, TargetQueueBytes - SDL_GetQueuedAudioSize(AudioDevice));
+    // TODO Why does this introduce sound artifacts?
+    // int BytesToWrite = TargetQueueBytes - SDL_GetQueuedAudioSize(AudioDevice);
+    int BytesToWrite = SoundOutput.BufferSize;
+    SDLFillSoundBuffer(AudioDevice, &SoundOutput, BytesToWrite);
 
     // Performance measurement / Dimensional analysis
     uint64 EndCycleCount = __rdtsc();
