@@ -2,6 +2,27 @@
 #include <stdlib.h>
 #include <math.h>
 
+/*
+   TODO: THIS IS NOT A FINAL PLATFORM LAYER!!!
+
+   - Saved game locations
+   - Getting a handle to our own executable file
+   - Asset loading path
+   - Threading (launch a thread)
+   - Raw input (support for multiple keyboards)
+   - Sleep/timeBeginPeriod
+   - ClipCursor() (for multimonitor support)
+   - Fullscreen support
+   - WM_SETCURSOR (control cursor visibility)
+   - QueryCancelAutoplay
+   - WM_ACTIVATEAPP (for when we are not the active application)
+   - Blit speed improvements (BitBlt)
+   - Hardware acceleration (OpenGL or Direct3D or BOTH??)
+   - GetKeyboardLayout (for French keyboards, international WASD support)
+
+   Just a partial list of stuff!!
+*/
+
 /* Macros and type aliases */
 
 // The many faces of 'static'
@@ -38,6 +59,8 @@ typedef Uint64 uint64;
 
 typedef float real32;
 typedef double real64;
+
+#include "handmade.cpp"
 
 /* Globals */
 struct sdl_offscreen_buffer
@@ -218,40 +241,6 @@ SDLGetWindowDimension(SDL_Window *Window)
 }
 
 internal void
-RenderWeirdGradient(sdl_offscreen_buffer Buffer, int XOffset, int YOffset)
-{
-  // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "painting pixels");
-  uint8 *Row = (uint8 *)Buffer.Memory;
-  for(int Y = 0;
-      Y < Buffer.Height;
-      ++Y)
-  {
-    uint32 *Pixel = (uint32 *)Row;
-    for(int X = 0;
-        X < Buffer.Width;
-        ++X)
-    {
-      /*
-       * Pixel (32 bits) structure:
-       *
-       * Memory:    RR GG BB xx
-       * Register:  xx GG BB RR
-       */
-      uint8 Blue = (X + XOffset);
-      uint8 Green = (Y + YOffset);
-      uint8 Red = 0;
-      // uint8 Padding = 0;
-
-      // Write the pixel to our buffer.
-      *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
-    }
-
-    // Move to the next row.
-    Row += Buffer.Pitch;
-  }
-}
-
-internal void
 SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width, int Height)
 {
   // TODO: Bulletproof this.
@@ -296,8 +285,6 @@ SDLResizeBuffer(sdl_offscreen_buffer *Buffer, SDL_Renderer *Renderer, int Width,
   // SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "allocating new bitmap memory");
   int BitmapMemorySize = (Width * Height) * Buffer->BytesPerPixel;
   Buffer->Memory = malloc(BitmapMemorySize);
-
-  RenderWeirdGradient(GlobalBackBuffer, 0,0);
 }
 
 // The `Foo *(&X)[BAR]` syntax in a type signature means "X is a reference to an array of pointers to Foo and has a size of BAR".
@@ -540,7 +527,13 @@ int main()
     }
 
     // Screen drawing
-    RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
+    game_offscreen_buffer Buffer = {};
+    Buffer.Memory = GlobalBackBuffer.Memory;
+    Buffer.Width = GlobalBackBuffer.Width;
+    Buffer.Height = GlobalBackBuffer.Height;
+    Buffer.Pitch = GlobalBackBuffer.Pitch;
+    GameUpdateAndRender(&Buffer, XOffset, YOffset);
+
     SDLDisplayBufferInWindow(GlobalBackBuffer, Renderer);
 
     // Audio generation
